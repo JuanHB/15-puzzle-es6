@@ -1,5 +1,6 @@
 import $ from 'jquery';
 import PuzzleControls from './puzzle-controls';
+import PuzzleInfo from './puzzle-info';
 /**
  * Creates a new Puzzle object
  */
@@ -18,7 +19,8 @@ class PuzzleBoard {
         this.tileSize = tileSize;
         this.jqRootElem = $("#root");
 
-        this.id = ["puzzle-", this._generateHex()].join("");
+        this.id = ["puzzle-", this.constructor._generateHex()].join("");
+
         this.jqPuzzleBoard = null;
         this.jqPuzzleContainer = null;
 
@@ -26,7 +28,13 @@ class PuzzleBoard {
         this.columnsArr = [...Array(this.columns).keys()];
         this.totalCellCount = this.rows * this.columns;
 
+        this.isScrambling = false;
+
+        this.shiftCellCount = 0;
+
+        this.puzzleInfo = null;
         this.puzzleControls = null;
+
     }
 
     /**
@@ -93,26 +101,25 @@ class PuzzleBoard {
     }
 
     scramble() {
-
-        let previousCell;
-        let i = 1;
+        let previousCell, i = 1;
+        this.isScrambling = true;
         const interval = setInterval(() => {
             if(i <= 100){
                 const adjacent = this.getAdjacentCells(this.getEmptyCell);
                 if(previousCell){
                     for(let j = adjacent.length-1; j >= 0; j--){
-                        if(adjacent[j].innerHTML == previousCell.innerHTML){
+                        if(adjacent[j].innerHTML === previousCell.innerHTML){
                             adjacent.splice(j, 1);
                         }
                     }
                 }
                 // Gets random adjacent cell and memorizes it for the next iteration
-                previousCell = adjacent[rand(0, adjacent.length-1)];
-                shiftCell(previousCell);
+                previousCell = adjacent[this.constructor._rand(0, adjacent.length-1)];
+                this.shiftCell(previousCell);
                 i++;
             } else {
                 clearInterval(interval);
-                state = 1;
+                this.isScrambling = false;
             }
         }, 5);
 
@@ -125,38 +132,34 @@ class PuzzleBoard {
 
     shiftCell(cell) {
 
-        if(!cell.hasClass("empty")){
+        const jqCell = $(cell);
+
+        if(!jqCell.hasClass("empty")){
 
             // Tries to get empty adjacent cell
-            const emptyCell = $(this.getEmptyAdjacentCell(cell));
-            if(emptyCell && emptyCell.length){
+            const jqEmptyCell = $(this.getEmptyAdjacentCell(jqCell));
+            if(jqEmptyCell && jqEmptyCell.length){
 
-                const cellIdStr = cell.attr("id");
-                const emptyCellIdStr = emptyCell.attr("id");
+                const cellIdStr = jqCell.attr("id");
+                const emptyCellIdStr = jqEmptyCell.attr("id");
 
-                const cellIdSplit = cellIdStr.split("-");
-                // const emptyCellId
+                this.constructor._swapNodes(jqCell[0], jqEmptyCell[0]);
+                this._swapCellOnObj(cellIdStr, emptyCellIdStr);
 
-                cell.attr("id", emptyCellIdStr);
-                emptyCell.attr("id", cellIdStr);
-
-                this._swapNodes(cell[0], emptyCell[0]);
-
-                // $(cell).before(emptyCell);
-                // $(emptyCell).after(cell);
+                if(!this.isScrambling){
+                    this.shiftCellCount++;
+                }
             }
-
         }
-
     }
 
     getAdjacentCells(cell){
 
         const
             { rowsArr, rows, columns } = this,
-            id = cell.attr("id").split("-"),
-            row = parseInt(id[1]),
-            col = parseInt(id[2]);
+            id = cell.attr("id").split("-").slice(1),
+            row = parseInt(id[0]),
+            col = parseInt(id[1]);
 
         const
             // cells from lines above and under
@@ -175,23 +178,51 @@ class PuzzleBoard {
     }
 
     get getEmptyCell() {
-        return this.jqPuzzleElem.find('.empty');
+        return this.jqPuzzleBoard.find('.empty');
     }
 
     getCell(row, column) {
         return this.rows[row][column];
     }
 
-    _generateHex() {
+    static _generateHex() {
         return (Math.random()*0xFFFFFF<<0).toString(16);
     }
 
-    _swapNodes (a, b) {
-        const aParent = a.parentNode;
-        const aSibling = a.nextSibling === b ? a : a.nextSibling;
+    static _rand(from, to){
+        return Math.floor(Math.random() * (to - from + 1)) + from;
+    }
+
+    static _swapNodes (a, b) {
+        const
+            jqA = $(a), jqB = $(b),
+            aId = jqA.attr("id"),
+            bId = jqB.attr("id"),
+            aParent = a.parentNode,
+            aSibling = a.nextSibling === b ? a : a.nextSibling;
         b.parentNode.insertBefore(a, b);
         aParent.insertBefore(b, aSibling);
+        jqA.attr("id", bId);
+        jqB.attr("id", aId);
     }
+
+    _swapCellOnObj(aId, bId){
+
+        const { rowsArr } = this;
+
+        const
+            aIdArr = aId.split("-").slice(1),
+            bIdArr = bId.split("-").slice(1),
+            // preserves the A and B values
+            aCell = rowsArr[aIdArr[0]][aIdArr[1]],
+            bCell = rowsArr[bIdArr[0]][bIdArr[1]];
+
+        // swaps A and B inside the rows array
+        this.rowsArr[aIdArr[0]][aIdArr[1]] = bCell;
+        this.rowsArr[bIdArr[0]][bIdArr[1]] = aCell;
+
+    }
+
 }
 
 export default PuzzleBoard;

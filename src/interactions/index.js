@@ -8,7 +8,7 @@ const Interactions = () => {
 
     puzzleBoard
         .create()
-        //.scramble();
+        .scramble();
 
 };
 export default Interactions;

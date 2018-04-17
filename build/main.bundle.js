@@ -10533,6 +10533,10 @@ var _puzzleControls = __webpack_require__(/*! ./puzzle-controls */ "./src/elemen
 
 var _puzzleControls2 = _interopRequireDefault(_puzzleControls);
 
+var _puzzleInfo = __webpack_require__(/*! ./puzzle-info */ "./src/elements/puzzle-info.js");
+
+var _puzzleInfo2 = _interopRequireDefault(_puzzleInfo);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
@@ -10563,7 +10567,8 @@ var PuzzleBoard = function () {
         this.tileSize = tileSize;
         this.jqRootElem = (0, _jquery2.default)("#root");
 
-        this.id = ["puzzle-", this._generateHex()].join("");
+        this.id = ["puzzle-", this.constructor._generateHex()].join("");
+
         this.jqPuzzleBoard = null;
         this.jqPuzzleContainer = null;
 
@@ -10571,6 +10576,11 @@ var PuzzleBoard = function () {
         this.columnsArr = [].concat(_toConsumableArray(Array(this.columns).keys()));
         this.totalCellCount = this.rows * this.columns;
 
+        this.isScrambling = false;
+
+        this.shiftCellCount = 0;
+
+        this.puzzleInfo = null;
         this.puzzleControls = null;
     }
 
@@ -10643,25 +10653,26 @@ var PuzzleBoard = function () {
         value: function scramble() {
             var _this2 = this;
 
-            var previousCell = void 0;
-            var i = 1;
+            var previousCell = void 0,
+                i = 1;
+            this.isScrambling = true;
             var interval = setInterval(function () {
                 if (i <= 100) {
                     var adjacent = _this2.getAdjacentCells(_this2.getEmptyCell);
                     if (previousCell) {
                         for (var j = adjacent.length - 1; j >= 0; j--) {
-                            if (adjacent[j].innerHTML == previousCell.innerHTML) {
+                            if (adjacent[j].innerHTML === previousCell.innerHTML) {
                                 adjacent.splice(j, 1);
                             }
                         }
                     }
                     // Gets random adjacent cell and memorizes it for the next iteration
-                    previousCell = adjacent[rand(0, adjacent.length - 1)];
-                    shiftCell(previousCell);
+                    previousCell = adjacent[_this2.constructor._rand(0, adjacent.length - 1)];
+                    _this2.shiftCell(previousCell);
                     i++;
                 } else {
                     clearInterval(interval);
-                    state = 1;
+                    _this2.isScrambling = false;
                 }
             }, 5);
 
@@ -10676,25 +10687,23 @@ var PuzzleBoard = function () {
         key: 'shiftCell',
         value: function shiftCell(cell) {
 
-            if (!cell.hasClass("empty")) {
+            var jqCell = (0, _jquery2.default)(cell);
+
+            if (!jqCell.hasClass("empty")) {
 
                 // Tries to get empty adjacent cell
-                var emptyCell = (0, _jquery2.default)(this.getEmptyAdjacentCell(cell));
-                if (emptyCell && emptyCell.length) {
+                var jqEmptyCell = (0, _jquery2.default)(this.getEmptyAdjacentCell(jqCell));
+                if (jqEmptyCell && jqEmptyCell.length) {
 
-                    var cellIdStr = cell.attr("id");
-                    var emptyCellIdStr = emptyCell.attr("id");
+                    var cellIdStr = jqCell.attr("id");
+                    var emptyCellIdStr = jqEmptyCell.attr("id");
 
-                    var cellIdSplit = cellIdStr.split("-");
-                    // const emptyCellId
+                    this.constructor._swapNodes(jqCell[0], jqEmptyCell[0]);
+                    this._swapCellOnObj(cellIdStr, emptyCellIdStr);
 
-                    cell.attr("id", emptyCellIdStr);
-                    emptyCell.attr("id", cellIdStr);
-
-                    this._swapNodes(cell[0], emptyCell[0]);
-
-                    // $(cell).before(emptyCell);
-                    // $(emptyCell).after(cell);
+                    if (!this.isScrambling) {
+                        this.shiftCellCount++;
+                    }
                 }
             }
         }
@@ -10704,9 +10713,9 @@ var PuzzleBoard = function () {
             var rowsArr = this.rowsArr,
                 rows = this.rows,
                 columns = this.columns,
-                id = cell.attr("id").split("-"),
-                row = parseInt(id[1]),
-                col = parseInt(id[2]);
+                id = cell.attr("id").split("-").slice(1),
+                row = parseInt(id[0]),
+                col = parseInt(id[1]);
 
 
             var
@@ -10734,22 +10743,50 @@ var PuzzleBoard = function () {
             return this.rows[row][column];
         }
     }, {
+        key: '_swapCellOnObj',
+        value: function _swapCellOnObj(aId, bId) {
+            var rowsArr = this.rowsArr;
+
+
+            var aIdArr = aId.split("-").slice(1),
+                bIdArr = bId.split("-").slice(1),
+
+            // preserves the A and B values
+            aCell = rowsArr[aIdArr[0]][aIdArr[1]],
+                bCell = rowsArr[bIdArr[0]][bIdArr[1]];
+
+            // swaps A and B inside the rows array
+            this.rowsArr[aIdArr[0]][aIdArr[1]] = bCell;
+            this.rowsArr[bIdArr[0]][bIdArr[1]] = aCell;
+        }
+    }, {
+        key: 'getEmptyCell',
+        get: function get() {
+            return this.jqPuzzleBoard.find('.empty');
+        }
+    }], [{
         key: '_generateHex',
         value: function _generateHex() {
             return (Math.random() * 0xFFFFFF << 0).toString(16);
         }
     }, {
-        key: '_swapNodes',
-        value: function _swapNodes(a, b) {
-            var aParent = a.parentNode;
-            var aSibling = a.nextSibling === b ? a : a.nextSibling;
-            b.parentNode.insertBefore(a, b);
-            aParent.insertBefore(b, aSibling);
+        key: '_rand',
+        value: function _rand(from, to) {
+            return Math.floor(Math.random() * (to - from + 1)) + from;
         }
     }, {
-        key: 'getEmptyCell',
-        get: function get() {
-            return this.jqPuzzleElem.find('.empty');
+        key: '_swapNodes',
+        value: function _swapNodes(a, b) {
+            var jqA = (0, _jquery2.default)(a),
+                jqB = (0, _jquery2.default)(b),
+                aId = jqA.attr("id"),
+                bId = jqB.attr("id"),
+                aParent = a.parentNode,
+                aSibling = a.nextSibling === b ? a : a.nextSibling;
+            b.parentNode.insertBefore(a, b);
+            aParent.insertBefore(b, aSibling);
+            jqA.attr("id", bId);
+            jqB.attr("id", aId);
         }
     }]);
 
@@ -10826,6 +10863,41 @@ exports.default = PuzzleControls;
 
 /***/ }),
 
+/***/ "./src/elements/puzzle-info.js":
+/*!*************************************!*\
+  !*** ./src/elements/puzzle-info.js ***!
+  \*************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var PuzzleInfo = function () {
+    function PuzzleInfo() {
+        _classCallCheck(this, PuzzleInfo);
+    }
+
+    _createClass(PuzzleInfo, [{
+        key: "create",
+        value: function create() {}
+    }]);
+
+    return PuzzleInfo;
+}();
+
+exports.default = PuzzleInfo;
+
+/***/ }),
+
 /***/ "./src/interactions/index.js":
 /*!***********************************!*\
   !*** ./src/interactions/index.js ***!
@@ -10852,8 +10924,7 @@ var Interactions = function Interactions() {
         rows: 4, columns: 4
     });
 
-    puzzleBoard.create();
-    //.scramble();
+    puzzleBoard.create().scramble();
 };
 exports.default = Interactions;
 
@@ -11110,7 +11181,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
          *
          */
         function rand(from, to) {
-
             return Math.floor(Math.random() * (to - from + 1)) + from;
         }
     }
