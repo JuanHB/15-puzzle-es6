@@ -97,6 +97,7 @@ class PuzzleBoard {
         const puzzleControls = new PuzzleControls({puzzleBoard: this});
         this.puzzleControls = puzzleControls.create();
 
+        // creates the puzzle info panel
         const puzzleInfo = new PuzzleInfo({puzzleBoard: this});
         this.puzzleInfo = puzzleInfo
             .create()
@@ -111,7 +112,7 @@ class PuzzleBoard {
         this.shiftCellCount = 0;
         this.puzzleInfo.updateInfo({ shiftCellCount: 0 });
         const interval = setInterval(() => {
-            if(i <= 100){
+            if(i <= 10){
                 const adjacent = this.getAdjacentCells(this.getEmptyCell);
                 if(previousCell){
                     for(let j = adjacent.length-1; j >= 0; j--){
@@ -121,12 +122,19 @@ class PuzzleBoard {
                     }
                 }
                 // Gets random adjacent cell and memorizes it for the next iteration
-                previousCell = adjacent[this.constructor._rand(0, adjacent.length-1)];
+                previousCell = adjacent[this.constructor._rand({from: 0, to: adjacent.length-1})];
                 this.shiftCell(previousCell);
                 i++;
             } else {
                 clearInterval(interval);
-                this.isScrambling = false;
+
+                console.log(this.isSolvable())
+                // recursion is bad!! >:(
+                if(!this.isSolvable()) {
+                    this.scramble();
+                } else {
+                    this.isScrambling = false;
+                }
             }
         }, 5);
 
@@ -135,6 +143,29 @@ class PuzzleBoard {
 
     solve() {
         console.log("solve");
+    }
+
+    isSolvable(){
+
+        const arr = this.rowsArr.map(r => {
+            return r.map(c => parseInt(c.text()) || null);
+        });
+
+        let inversions = 0;
+
+        for(let i = 0; i < arr.length - 1; i++) {
+            // Check if a larger number exists after the current
+            // place in the array, if so increment inversions.
+            for(let j = i + 1; j < arr.length; j++)
+            if(arr[i] > arr[j]) inversions++;
+
+            // Determine if the distance of the blank space from the bottom
+            // right is even or odd, and increment inversions if it is odd.
+            if(arr[i] === 0 && i % 2 === 1) inversions++;
+        }
+
+        // If inversions is even, the puzzle is solvable.
+        return (inversions % 2 === 0);
     }
 
     /**
@@ -154,8 +185,8 @@ class PuzzleBoard {
                 const cellIdStr = jqCell.attr("id");
                 const emptyCellIdStr = jqEmptyCell.attr("id");
 
-                this.constructor._swapNodes(jqCell[0], jqEmptyCell[0]);
-                this._swapCellOnObj(cellIdStr, emptyCellIdStr);
+                this.constructor._swapNodes({a: jqCell[0], b: jqEmptyCell[0]});
+                this._swapCellOnObj({aId: cellIdStr, bId: emptyCellIdStr});
 
                 if(!this.isScrambling){
                     this.shiftCellCount++;
@@ -193,19 +224,19 @@ class PuzzleBoard {
         return this.jqPuzzleBoard.find('.empty');
     }
 
-    getCell(row, column) {
-        return this.rows[row][column];
+    getCell({row, column}) {
+        return this.rowsArr[row][column];
     }
 
     static _generateHex() {
         return (Math.random()*0xFFFFFF<<0).toString(16);
     }
 
-    static _rand(from, to){
+    static _rand({from, to}){
         return Math.floor(Math.random() * (to - from + 1)) + from;
     }
 
-    static _swapNodes (a, b) {
+    static _swapNodes({a, b}) {
         const
             jqA = $(a), jqB = $(b),
             aId = jqA.attr("id"),
@@ -218,16 +249,14 @@ class PuzzleBoard {
         jqB.attr("id", aId);
     }
 
-    _swapCellOnObj(aId, bId){
-
-        const { rowsArr } = this;
+    _swapCellOnObj({aId, bId}){
 
         const
             aIdArr = aId.split("-").slice(1),
             bIdArr = bId.split("-").slice(1),
             // preserves the A and B values
-            aCell = rowsArr[aIdArr[0]][aIdArr[1]],
-            bCell = rowsArr[bIdArr[0]][bIdArr[1]];
+            aCell = this.getCell({row: aIdArr[0], column: aIdArr[1]}),
+            bCell = this.getCell({row: bIdArr[0], column: bIdArr[1]});
 
         // swaps A and B inside the rows array
         this.rowsArr[aIdArr[0]][aIdArr[1]] = bCell;

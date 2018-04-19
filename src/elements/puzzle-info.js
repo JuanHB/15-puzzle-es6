@@ -15,7 +15,8 @@ class PuzzleInfo {
             .addClass("puzzle-info");
 
         const jqPuzzleInfoContent = $([
-            "<span>Moves: </span><span class='shift-cell-count'> </span>"
+            "<span>Moves: </span>",
+            "<span class='shift-cell-count'>0</span>"
         ].join(""));
 
         jqPuzzleInfo.append(jqPuzzleInfoContent);
