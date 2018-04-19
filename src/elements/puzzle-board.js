@@ -42,7 +42,7 @@ class PuzzleBoard {
      */
     create() {
 
-        const { id, tileSize, rowsArr, columnsArr, totalCellCount, jqRootElem } = this;
+        const { id, tileSize, rowsArr, columnsArr, totalCellCount, jqRootElem, shiftCellCount } = this;
 
         const jqPuzzleContainer = $(document.createElement("div"))
             .addClass("puzzle-container")
@@ -97,12 +97,19 @@ class PuzzleBoard {
         const puzzleControls = new PuzzleControls({puzzleBoard: this});
         this.puzzleControls = puzzleControls.create();
 
+        const puzzleInfo = new PuzzleInfo({puzzleBoard: this});
+        this.puzzleInfo = puzzleInfo
+            .create()
+            .updateInfo({shiftCellCount});
+
         return this;
     }
 
     scramble() {
         let previousCell, i = 1;
         this.isScrambling = true;
+        this.shiftCellCount = 0;
+        this.puzzleInfo.updateInfo({ shiftCellCount: 0 });
         const interval = setInterval(() => {
             if(i <= 100){
                 const adjacent = this.getAdjacentCells(this.getEmptyCell);
@@ -130,6 +137,10 @@ class PuzzleBoard {
         console.log("solve");
     }
 
+    /**
+     * Shifts the given cell to the empty space
+     * @param cell
+     */
     shiftCell(cell) {
 
         const jqCell = $(cell);
@@ -148,6 +159,7 @@ class PuzzleBoard {
 
                 if(!this.isScrambling){
                     this.shiftCellCount++;
+                    this.puzzleInfo.updateInfo({shiftCellCount: this.shiftCellCount})
                 }
             }
         }
