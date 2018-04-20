@@ -1,41 +1,42 @@
 class PuzzleInfo {
     constructor ({ puzzleBoard }) {
         this.puzzleBoard = puzzleBoard;
-
-        this.jqPuzzleInfo = null;
-        this.jqPuzzleInfoContent = null;
+        this.puzzleInfoElem = null;
     }
 
     create() {
 
-        const { id, jqPuzzleContainer, shiftCellCount } = this.puzzleBoard;
+        const { id, puzzleContainerElem } = this.puzzleBoard;
 
-        const jqPuzzleInfo = $(document.createElement("div"))
-            .attr({id: "info-"+id })
-            .addClass("puzzle-info");
+        const puzzleInfoElem = document.createElement("div");
+        puzzleInfoElem.id = "info-"+id;
+        puzzleInfoElem.classList.add("puzzle-info");
 
-        const jqPuzzleInfoContent = $([
-            "<span>Moves: </span>",
-            "<span class='shift-cell-count'>0</span>"
-        ].join(""));
+        const puzzleInfoContentMovesLabel = document.createElement("span");
+        puzzleInfoContentMovesLabel.innerHTML = "Moves: ";
 
-        jqPuzzleInfo.append(jqPuzzleInfoContent);
-        jqPuzzleContainer.prepend(jqPuzzleInfo);
+        const puzzleInfoContentMovesCount = document.createElement("span");
+        puzzleInfoContentMovesCount.innerHTML = "0";
+        puzzleInfoContentMovesCount.classList.add("shift-cell-count");
 
-        this.jqPuzzleInfo = jqPuzzleInfo;
-        this.jqPuzzleInfoContent = jqPuzzleInfoContent;
+        puzzleInfoElem
+            .appendChild(puzzleInfoContentMovesLabel)
+            .appendChild(puzzleInfoContentMovesCount);
+
+        puzzleContainerElem
+            .prepend(puzzleInfoElem);
+
+        this.puzzleInfoElem = puzzleInfoElem;
 
         return this;
     }
 
     updateInfo({ shiftCellCount }) {
 
-        const { jqPuzzleInfo } = this;
-
-        $(jqPuzzleInfo)
-            .find(".shift-cell-count")
-            .text(shiftCellCount.toString());
-
+        const { puzzleInfoElem } = this;
+        document.getElementById(puzzleInfoElem.id)
+            .getElementsByClassName("shift-cell-count")[0]
+            .innerHTML = shiftCellCount.toString();
         return this;
 
     }

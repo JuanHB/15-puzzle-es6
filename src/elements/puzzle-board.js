@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import PuzzleControls from './puzzle-controls';
 import PuzzleInfo from './puzzle-info';
 /**
@@ -17,12 +16,12 @@ class PuzzleBoard {
         this.rows = rows;
         this.columns = columns;
         this.tileSize = tileSize;
-        this.jqRootElem = $("#root");
+        this.rootElem = document.getElementById("root");
 
         this.id = ["puzzle-", this.constructor._generateHex()].join("");
 
-        this.jqPuzzleBoard = null;
-        this.jqPuzzleContainer = null;
+        this.puzzleBoardElem = null;
+        this.puzzleContainerElem = null;
 
         this.rowsArr = [...Array(this.rows).keys()];
         this.columnsArr = [...Array(this.columns).keys()];
@@ -42,15 +41,23 @@ class PuzzleBoard {
      */
     create() {
 
-        const { id, tileSize, rowsArr, columnsArr, totalCellCount, jqRootElem, shiftCellCount } = this;
+        const { id, tileSize, rowsArr, columnsArr, totalCellCount, rootElem, shiftCellCount } = this;
 
-        const jqPuzzleContainer = $(document.createElement("div"))
-            .addClass("puzzle-container")
-            .attr({id});
+        const puzzleContainerElem = document.createElement("div");
+        puzzleContainerElem.id = id;
+        puzzleContainerElem.classList.add("puzzle-container");
 
-        const jqPuzzleBoard = $(document.createElement("div"))
-            .attr({ id:'board-'+id })
-            .addClass("puzzle-board-grid");
+        const puzzleBoardElem = document.createElement("div");
+        puzzleBoardElem.id = "board-"+id;
+        puzzleBoardElem.classList.add("puzzle-board-grid");
+
+        const gridRows = rowsArr.map(() => "auto").join(" ");
+        const gridColumns = columnsArr.map(() => "auto").join(" ");
+
+        puzzleBoardElem.setAttribute("style", [
+            "grid-template-rows:", gridRows,";",
+            "grid-template-columns:", gridColumns,";"
+        ].join(""));
 
         let cellNumber = 0;
 
@@ -59,39 +66,40 @@ class PuzzleBoard {
             const rowCells = [];
             columnsArr.forEach(column => {
 
-                const jqNewCell = $(document.createElement("div"));
-                jqNewCell
-                    .attr("id", ["cell-", row, "-", column].join(""))
-                    .addClass("grid-item");
+                const newCellElem = document.createElement("div");
+                newCellElem.id = ["cell-", row, "-", column].join("");
+                newCellElem.classList.add("grid-item");
 
                 // adds the cell attributes by checking if the
                 // current cell element is not the last one
                 if(cellNumber < totalCellCount - 1){
                     cellNumber++;
-                    jqNewCell
-                        .html(cellNumber.toString())
-                        .click(() => this.shiftCell(jqNewCell))
-                        .addClass("number");
+                    newCellElem.innerHTML = cellNumber.toString();
+                    newCellElem.addEventListener("click", () => this.shiftCell(newCellElem));
+                    newCellElem.classList.add("number");
                 } else {
-                    jqNewCell
-                        .addClass("empty");
+                    newCellElem.classList.add("empty")
                 }
-                rowCells.push(jqNewCell);
-                jqPuzzleBoard.append(jqNewCell);
+                rowCells
+                    .push(newCellElem);
+                puzzleBoardElem
+                    .appendChild(newCellElem);
 
             });
             rowsArr[rowIndex] = rowCells;
         });
 
         // appends the puzzle board to the container
-        jqPuzzleContainer.append(jqPuzzleBoard);
+        puzzleContainerElem
+            .appendChild(puzzleBoardElem);
 
         // appends the new crated puzzle to the
         // #root element on the index file
-        jqRootElem.append(jqPuzzleContainer);
+        rootElem
+            .appendChild(puzzleContainerElem);
 
-        this.jqPuzzleBoard = jqPuzzleBoard;
-        this.jqPuzzleContainer = jqPuzzleContainer;
+        this.puzzleBoardElem = puzzleBoardElem;
+        this.puzzleContainerElem = puzzleContainerElem;
 
         // Creates the controls elements for the puzzle board
         const puzzleControls = new PuzzleControls({puzzleBoard: this});
@@ -106,13 +114,17 @@ class PuzzleBoard {
         return this;
     }
 
+    /**
+     * Scramble the puzzle, only results in solvable puzzles...
+     * @returns {PuzzleBoard}
+     */
     scramble() {
         let previousCell, i = 1;
         this.isScrambling = true;
         this.shiftCellCount = 0;
-        this.puzzleInfo.updateInfo({ shiftCellCount: 0 });
+        this.puzzleInfo.updateInfo({ shiftCellCount: this.shiftCellCount });
         const interval = setInterval(() => {
-            if(i <= 10){
+            if(i <= this.totalCellCount){
                 const adjacent = this.getAdjacentCells(this.getEmptyCell);
                 if(previousCell){
                     for(let j = adjacent.length-1; j >= 0; j--){
@@ -127,8 +139,6 @@ class PuzzleBoard {
                 i++;
             } else {
                 clearInterval(interval);
-
-                console.log(this.isSolvable())
                 // recursion is bad!! >:(
                 if(!this.isSolvable()) {
                     this.scramble();
@@ -145,10 +155,14 @@ class PuzzleBoard {
         console.log("solve");
     }
 
+    /**
+     * Checks if the puzzle is solvable
+     * @returns {boolean}
+     */
     isSolvable(){
 
         const arr = this.rowsArr.map(r => {
-            return r.map(c => parseInt(c.text()) || null);
+            return r.map(c => parseInt(c.innerHTML) || null);
         });
 
         let inversions = 0;
@@ -174,18 +188,16 @@ class PuzzleBoard {
      */
     shiftCell(cell) {
 
-        const jqCell = $(cell);
-
-        if(!jqCell.hasClass("empty")){
+        if(cell && !cell.classList.contains("empty")){
 
             // Tries to get empty adjacent cell
-            const jqEmptyCell = $(this.getEmptyAdjacentCell(jqCell));
-            if(jqEmptyCell && jqEmptyCell.length){
+            const emptyCell = this.getEmptyAdjacentCell(cell);
+            if(emptyCell){
 
-                const cellIdStr = jqCell.attr("id");
-                const emptyCellIdStr = jqEmptyCell.attr("id");
+                const cellIdStr = cell.id;
+                const emptyCellIdStr = emptyCell.id;
 
-                this.constructor._swapNodes({a: jqCell[0], b: jqEmptyCell[0]});
+                this.constructor._swapNodes({a: cell, b: emptyCell});
                 this._swapCellOnObj({aId: cellIdStr, bId: emptyCellIdStr});
 
                 if(!this.isScrambling){
@@ -196,59 +208,100 @@ class PuzzleBoard {
         }
     }
 
+    /**
+     * Get adjacent cell from the given cell
+     * @param cell
+     * @returns {*[]}
+     */
     getAdjacentCells(cell){
 
         const
             { rowsArr, rows, columns } = this,
-            id = cell.attr("id").split("-").slice(1),
+            result = [],
+            id = cell.id.split("-").slice(1),
             row = parseInt(id[0]),
             col = parseInt(id[1]);
 
         const
             // cells from lines above and under
-            above  = row > 0 ? rowsArr[row-1] ? rowsArr[row-1][col] : [] : [],
-            under  = row < rows-1 ? rowsArr[row+1] ? rowsArr[row+1][col] : [] : [],
+            above  = row > 0 ? rowsArr[row-1] ? rowsArr[row-1][col] : null : null,
+            under  = row < rows-1 ? rowsArr[row+1] ? rowsArr[row+1][col] : null : null,
             // cells in the same line
-            before = col > 0 ? rowsArr[row][col-1] : [],
-            after  = col < columns-1 ? rowsArr[row][col+1] : [];
+            before = col > 0 ? rowsArr[row][col-1] : null,
+            after  = col < columns-1 ? rowsArr[row][col+1] : null;
 
-        return [...above, ...before, ...after, ...under];
+        if(above) result.push(above);
+        if(under) result.push(under);
+        if(after) result.push(after);
+        if(before) result.push(before);
+
+        return result
     }
 
     getEmptyAdjacentCell(cell) {
         const adjacentCells = this.getAdjacentCells(cell);
-        return adjacentCells.filter(a => a.className.includes("empty"));
+        const filterAdjacentCell = adjacentCells.filter(a => a.classList.contains("empty"))
+        return filterAdjacentCell.length ? filterAdjacentCell[0] : null;
     }
 
     get getEmptyCell() {
-        return this.jqPuzzleBoard.find('.empty');
+        return this.puzzleBoardElem.getElementsByClassName("empty")[0];
     }
 
     getCell({row, column}) {
         return this.rowsArr[row][column];
     }
 
+    /**
+     * ==========================
+     * ===== Private methods ====
+     * ==========================
+     * */
+
+    /**
+     * Generate an random HEX string
+     * @returns {string}
+     * @private
+     */
     static _generateHex() {
         return (Math.random()*0xFFFFFF<<0).toString(16);
     }
 
+    /**
+     * Generate a random integer
+     * @param from
+     * @param to
+     * @returns {*}
+     * @private
+     */
     static _rand({from, to}){
         return Math.floor(Math.random() * (to - from + 1)) + from;
     }
 
+    /**
+     * Swap DOM nodes
+     * @param a
+     * @param b
+     * @private
+     */
     static _swapNodes({a, b}) {
         const
-            jqA = $(a), jqB = $(b),
-            aId = jqA.attr("id"),
-            bId = jqB.attr("id"),
+            aId = a.id,
+            bId = b.id,
             aParent = a.parentNode,
             aSibling = a.nextSibling === b ? a : a.nextSibling;
         b.parentNode.insertBefore(a, b);
         aParent.insertBefore(b, aSibling);
-        jqA.attr("id", bId);
-        jqB.attr("id", aId);
+        a.id = bId;
+        b.id = aId;
     }
 
+    /**
+     * Swap cells on the object rowsArr property
+     * @param aId
+     * @param bId
+     * @private
+     */
     _swapCellOnObj({aId, bId}){
 
         const

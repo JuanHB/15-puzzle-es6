@@ -3,7 +3,7 @@ import PuzzleBoard from "../elements/puzzle-board";
 const Interactions = () => {
 
     const puzzleBoard = new PuzzleBoard({
-        rows: 4, columns: 4
+        rows: 5, columns: 12
     });
 
     puzzleBoard

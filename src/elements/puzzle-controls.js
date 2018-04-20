@@ -1,5 +1,3 @@
-import $ from "jquery";
-
 class PuzzleControls {
 
     constructor({puzzleBoard}) {
@@ -8,29 +6,31 @@ class PuzzleControls {
 
     create(){
 
-        const { id, jqPuzzleContainer } = this.puzzleBoard;
+        const { id, puzzleContainerElem } = this.puzzleBoard;
 
-        const jqPuzzleControls = $(document.createElement("div"))
-            .attr({ id: "controls-"+id })
-            .addClass("puzzle-controls");
+        const puzzleControlsElem = document.createElement("div");
+        puzzleControlsElem.id = "controls-"+id;
+        puzzleControlsElem.classList.add("puzzle-controls");
 
-        const jqScrambleButton = $(document.createElement("button"))
-            .attr({ id: "scramble-"+id })
-            .html("Scramble")
-            .click(() => this.puzzleBoard.scramble())
-            .addClass("action scramble");
+        const scrambleButtonElem = document.createElement("button");
+        scrambleButtonElem.id = "scramble-"+id;
+        scrambleButtonElem.innerHTML = "Scramble";
+        scrambleButtonElem.classList.add("action");
+        scrambleButtonElem.classList.add("scramble");
+        scrambleButtonElem.addEventListener("click", () => this.puzzleBoard.scramble());
 
-        const jqSolveButton = $(document.createElement("button"))
-            .attr({ id: "solve-"+id })
-            .html("Solve")
-            .click(() => this.puzzleBoard.solve())
-            .addClass("action solve");
+        const solveButtonElem = document.createElement("button");
+        solveButtonElem.id = "solve-"+id;
+        solveButtonElem.innerHTML = "Solve";
+        solveButtonElem.classList.add("action");
+        solveButtonElem.classList.add("solve");
+        solveButtonElem.addEventListener("click", () => this.puzzleBoard.solve());
 
-        jqPuzzleControls
-            .append(jqSolveButton, jqScrambleButton);
+        puzzleControlsElem.appendChild(solveButtonElem);
+        puzzleControlsElem.appendChild(scrambleButtonElem);
 
-        jqPuzzleContainer
-            .append(jqPuzzleControls);
+        puzzleContainerElem
+            .appendChild(puzzleControlsElem);
 
     }
 
