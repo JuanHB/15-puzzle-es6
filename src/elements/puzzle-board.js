@@ -25,6 +25,7 @@ class PuzzleBoard {
 
         this.rowsArr = [...Array(this.rows).keys()];
         this.columnsArr = [...Array(this.columns).keys()];
+        this.rowsMatrix = [];
         this.totalCellCount = this.rows * this.columns;
 
         this.isScrambling = false;
@@ -41,7 +42,7 @@ class PuzzleBoard {
      */
     create() {
 
-        const { id, tileSize, rowsArr, columnsArr, totalCellCount, rootElem, shiftCellCount } = this;
+        const { id, tileSize, rowsMatrix, rowsArr, columnsArr, totalCellCount, rootElem, shiftCellCount } = this;
 
         const puzzleContainerElem = document.createElement("div");
         puzzleContainerElem.id = id;
@@ -63,11 +64,11 @@ class PuzzleBoard {
 
         // creating cells and placing it on rows and columns
         rowsArr.forEach((row, rowIndex) => {
-            const rowCells = [];
-            columnsArr.forEach(column => {
+            const rowCellsObj = [], rowCellsMatrix = [];
+            columnsArr.forEach(col => {
 
                 const newCellElem = document.createElement("div");
-                newCellElem.id = ["cell-", row, "-", column].join("");
+                newCellElem.id = ["cell-", row, "-", col].join("");
                 newCellElem.classList.add("grid-item");
 
                 // adds the cell attributes by checking if the
@@ -77,16 +78,17 @@ class PuzzleBoard {
                     newCellElem.innerHTML = cellNumber.toString();
                     newCellElem.addEventListener("click", () => this.shiftCell(newCellElem));
                     newCellElem.classList.add("number");
+                    rowCellsMatrix.push(cellNumber);
                 } else {
-                    newCellElem.classList.add("empty")
+                    newCellElem.classList.add("empty");
+                    rowCellsMatrix.push("empty");
                 }
-                rowCells
-                    .push(newCellElem);
-                puzzleBoardElem
-                    .appendChild(newCellElem);
+                rowCellsObj.push(newCellElem);
+                puzzleBoardElem.appendChild(newCellElem);
 
             });
-            rowsArr[rowIndex] = rowCells;
+            rowsArr[rowIndex] = rowCellsObj;
+            rowsMatrix[rowIndex] = rowCellsMatrix;
         });
 
         // appends the puzzle board to the container
@@ -119,24 +121,38 @@ class PuzzleBoard {
      * @returns {PuzzleBoard}
      */
     scramble() {
-        let previousCell, i = 1;
+
+        let i = 1,
+            previousCell;
         this.isScrambling = true;
         this.shiftCellCount = 0;
         this.puzzleInfo.updateInfo({ shiftCellCount: this.shiftCellCount });
+
+        const { rowsMatrix } = this;
+
+
+
+
         const interval = setInterval(() => {
             if(i <= this.totalCellCount){
-                const adjacent = this.getAdjacentCells(this.getEmptyCell);
-                if(previousCell){
+
+                const adjacent = this.getAdjacentCells(this.getCellPosition("empty"));
+
+                /*if(previousCell){
                     for(let j = adjacent.length-1; j >= 0; j--){
                         if(adjacent[j].innerHTML === previousCell.innerHTML){
                             adjacent.splice(j, 1);
                         }
                     }
-                }
+                }*/
+
                 // Gets random adjacent cell and memorizes it for the next iteration
                 previousCell = adjacent[this.constructor._rand({from: 0, to: adjacent.length-1})];
-                this.shiftCell(previousCell);
+
+                this.shiftCellObj(previousCell);
+
                 i++;
+
             } else {
                 clearInterval(interval);
                 // recursion is bad!! >:(
@@ -184,77 +200,72 @@ class PuzzleBoard {
 
     /**
      * Shifts the given cell to the empty space
-     * @param cell
+     * @param cellObj
      */
-    shiftCell(cell) {
+    shiftCell(cellObj) {
+        const
+            idArr = cellObj.id.split("-"),
+            cell = {
+                row: parseInt(idArr[1]),
+                col: parseInt(idArr[2])
+            },
+            emptyCell = this.getAdjacentCells(cell).filter(c => c.empty)[0];
 
-        if(cell && !cell.classList.contains("empty")){
+        if(emptyCell) {
+            const nodesToSwap = {
+                a: cellObj, b: this.getCellObj(emptyCell)
+            };
+            this.constructor._swapNodes(nodesToSwap);
 
-            // Tries to get empty adjacent cell
-            const emptyCell = this.getEmptyAdjacentCell(cell);
-            if(emptyCell){
+            const cellToSwap = {
+                a: cell, b: emptyCell
+            };
+            this._swapCellObj(cellToSwap);
+            this._swapCellMatrix(cellToSwap);
 
-                const cellIdStr = cell.id;
-                const emptyCellIdStr = emptyCell.id;
-
-                this.constructor._swapNodes({a: cell, b: emptyCell});
-                this._swapCellOnObj({aId: cellIdStr, bId: emptyCellIdStr});
-
-                if(!this.isScrambling){
-                    this.shiftCellCount++;
-                    this.puzzleInfo.updateInfo({shiftCellCount: this.shiftCellCount})
-                }
+            if(!this.isScrambling){
+                this.shiftCellCount++;
+                this.puzzleInfo.updateInfo({shiftCellCount: this.shiftCellCount})
             }
         }
     }
 
-    /**
-     * Get adjacent cell from the given cell
-     * @param cell
-     * @returns {*[]}
-     */
-    getAdjacentCells(cell){
+    getAdjacentCells({row, col}) {
 
         const
-            { rowsArr, rows, columns } = this,
-            result = [],
-            id = cell.id.split("-").slice(1),
-            row = parseInt(id[0]),
-            col = parseInt(id[1]);
+            { rowsMatrix, rows, columns } = this,
+            adjacent = [];
 
-        const
-            // cells from lines above and under
-            above  = row > 0 ? rowsArr[row-1] ? rowsArr[row-1][col] : null : null,
-            under  = row < rows-1 ? rowsArr[row+1] ? rowsArr[row+1][col] : null : null,
-            // cells in the same line
-            before = col > 0 ? rowsArr[row][col-1] : null,
-            after  = col < columns-1 ? rowsArr[row][col+1] : null;
+        // cells from lines above and under
+        adjacent[0] = row > 0 ? rowsMatrix[row-1] ? rowsMatrix[row-1][col] : null : null;
+        adjacent[1] = row < rows-1 ? rowsMatrix[row+1] ? rowsMatrix[row+1][col] : null : null;
+        // cells in the same line (before and after)
+        adjacent[2] = col > 0 ? rowsMatrix[row][col-1] : null;
+        adjacent[3] = col < columns-1 ? rowsMatrix[row][col+1] : null;
 
-        if(above) result.push(above);
-        if(under) result.push(under);
-        if(after) result.push(after);
-        if(before) result.push(before);
+        return adjacent.filter(a => !!a).map(c => this.getCellPosition(c));
 
-        return result
     }
 
-    getEmptyAdjacentCell(cell) {
-        const adjacentCells = this.getAdjacentCells(cell);
-        const filterAdjacentCell = adjacentCells.filter(a => a.classList.contains("empty"))
-        return filterAdjacentCell.length ? filterAdjacentCell[0] : null;
+    getCellObj({row, col}) {
+        return this.rowsArr[row][col];
     }
 
-    get getEmptyCell() {
-        return this.puzzleBoardElem.getElementsByClassName("empty")[0];
-    }
-
-    getCell({row, column}) {
-        return this.rowsArr[row][column];
+    getCellPosition(cellNumber){
+        const { rowsMatrix } = this;
+        const res = { row: 0, col: 0, empty: false};
+        rowsMatrix.forEach((r,i) => {
+            if (r.includes(cellNumber)) {
+                res.row = i;
+                res.col = r.indexOf(cellNumber);
+                res.empty = cellNumber === "empty";
+            }
+        });
+        return res;
     }
 
     /**
-     * ==========================
-     * ===== Private methods ====
+     * Private methods
      * ==========================
      * */
 
@@ -298,23 +309,33 @@ class PuzzleBoard {
 
     /**
      * Swap cells on the object rowsArr property
-     * @param aId
-     * @param bId
      * @private
      */
-    _swapCellOnObj({aId, bId}){
+    _swapCellObj({a, b}){
 
         const
-            aIdArr = aId.split("-").slice(1),
-            bIdArr = bId.split("-").slice(1),
             // preserves the A and B values
-            aCell = this.getCell({row: aIdArr[0], column: aIdArr[1]}),
-            bCell = this.getCell({row: bIdArr[0], column: bIdArr[1]});
+            aCell = this.getCellObj(a),
+            bCell = this.getCellObj(b);
 
-        // swaps A and B inside the rows array
-        this.rowsArr[aIdArr[0]][aIdArr[1]] = bCell;
-        this.rowsArr[bIdArr[0]][bIdArr[1]] = aCell;
+        // swaps A and B inside the rows cells object array
+        this.rowsArr[a.row][a.col] = bCell;
+        this.rowsArr[b.row][b.col] = aCell;
+        // swaps A and B inside the rows and cells matrix
+        this.rowsMatrix[a.row][a.col] = parseInt(bCell.innerText) || "empty";
+        this.rowsMatrix[b.row][b.col] = parseInt(aCell.innerText) || "empty";
 
+    }
+
+    _swapCellMatrix({a, b}){
+
+        const
+            { rowsMatrix } = this,
+            cellA = rowsMatrix[a.row][a.col],
+            cellB = rowsMatrix[b.row][b.col];
+
+        this.rowsMatrix[a.row][a.col] = cellB;
+        this.rowsMatrix[b.row][b.col] = cellA;
     }
 
 }
