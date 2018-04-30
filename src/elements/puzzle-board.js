@@ -1,5 +1,5 @@
-import PuzzleControls from './puzzle-controls';
-import PuzzleInfo from './puzzle-info';
+import PuzzleControls from "./puzzle-controls";
+import PuzzleInfo from "./puzzle-info";
 /**
  * Creates a new Puzzle object
  */
@@ -28,8 +28,11 @@ class PuzzleBoard {
         this.rowsMatrix = [];
         this.totalCellCount = this.rows * this.columns;
 
-        this.isScrambling = false;
+        this.solvedCondition = null;
 
+        this.isSolved = false;
+
+        this.isScrambling = false;
         this.shiftCellCount = 0;
 
         this.puzzleInfo = null;
@@ -44,23 +47,24 @@ class PuzzleBoard {
 
         const { id, tileSize, rowsMatrix, rowsArr, columnsArr, totalCellCount, rootElem, shiftCellCount } = this;
 
+        const gridRows = rowsArr.map(() => "auto").join(" ");
+        const gridColumns = columnsArr.map(() => "auto").join(" ");
+        const puzzleBoardElem = document.createElement("div");
         const puzzleContainerElem = document.createElement("div");
+
+        let cellNumber = 0;
+
+        // puzzle container element attributes
         puzzleContainerElem.id = id;
         puzzleContainerElem.classList.add("puzzle-container");
 
-        const puzzleBoardElem = document.createElement("div");
+        // puzzle board element attributes and style
         puzzleBoardElem.id = "board-"+id;
         puzzleBoardElem.classList.add("puzzle-board-grid");
-
-        const gridRows = rowsArr.map(() => "auto").join(" ");
-        const gridColumns = columnsArr.map(() => "auto").join(" ");
-
         puzzleBoardElem.setAttribute("style", [
             "grid-template-rows:", gridRows,";",
-            "grid-template-columns:", gridColumns,";"
+            "grid-template-columns:", gridColumns,";",
         ].join(""));
-
-        let cellNumber = 0;
 
         // creating cells and placing it on rows and columns
         rowsArr.forEach((row, rowIndex) => {
@@ -76,13 +80,15 @@ class PuzzleBoard {
                 if(cellNumber < totalCellCount - 1){
                     cellNumber++;
                     newCellElem.innerHTML = cellNumber.toString();
-                    newCellElem.addEventListener("click", () => this.shiftCell(newCellElem));
                     newCellElem.classList.add("number");
                     rowCellsMatrix.push(cellNumber);
                 } else {
                     newCellElem.classList.add("empty");
                     rowCellsMatrix.push("empty");
                 }
+
+                newCellElem.addEventListener("click", () => this.shiftCell(newCellElem));
+
                 rowCellsObj.push(newCellElem);
                 puzzleBoardElem.appendChild(newCellElem);
 
@@ -113,6 +119,11 @@ class PuzzleBoard {
             .create()
             .updateInfo({shiftCellCount});
 
+        // creates and store the solved condition string
+        let arr = Array.from(new Array(totalCellCount),(val,index)=>index+1);
+        arr[arr.length-1] = "empty";
+        this.solvedCondition = arr.join("");
+
         return this;
     }
 
@@ -122,47 +133,40 @@ class PuzzleBoard {
      */
     scramble() {
 
-        let i = 1,
-            previousCell;
+        this.isSolved = false;
         this.isScrambling = true;
         this.shiftCellCount = 0;
         this.puzzleInfo.updateInfo({ shiftCellCount: this.shiftCellCount });
 
-        const { rowsMatrix } = this;
+        const { rowsMatrix, rowsArr } = this;
 
+        // do the scramble 100 times...
+        for(let i = 0; i < 100; i++){
 
+            const emptyCell = this.getCellPosition("empty");
+            const adjacent = this.getAdjacentCells(emptyCell);
+            const randomCell = adjacent[this.constructor._rand({ from:0, to: adjacent.length-1 })];
+            const cellsToSwap = {a: emptyCell, b: randomCell};
+            this._swapCellMatrix(cellsToSwap);
 
+        }
 
-        const interval = setInterval(() => {
-            if(i <= this.totalCellCount){
+        // if is not solvable, runs the scramble again (recursions bad, I know)
+        if(!this.checkIfSolvable()){
+            return this.scramble();
+        }
 
-                const adjacent = this.getAdjacentCells(this.getCellPosition("empty"));
+        // updating the HTML with the new values for each position
+        rowsMatrix.forEach((row, rowIndex) => {
+            row.forEach((cell, cellIndex) => {
+                const destCellObj = rowsArr[rowIndex][cellIndex];
+                destCellObj.innerText = cell === "empty" ? "" : cell;
+                destCellObj.classList.toggle("number", cell !== "empty");
+                destCellObj.classList.toggle("empty", cell === "empty");
+            });
+        });
 
-                /*if(previousCell){
-                    for(let j = adjacent.length-1; j >= 0; j--){
-                        if(adjacent[j].innerHTML === previousCell.innerHTML){
-                            adjacent.splice(j, 1);
-                        }
-                    }
-                }*/
-
-                // Gets random adjacent cell and memorizes it for the next iteration
-                previousCell = adjacent[this.constructor._rand({from: 0, to: adjacent.length-1})];
-
-                this.shiftCellObj(previousCell);
-
-                i++;
-
-            } else {
-                clearInterval(interval);
-                // recursion is bad!! >:(
-                if(!this.isSolvable()) {
-                    this.scramble();
-                } else {
-                    this.isScrambling = false;
-                }
-            }
-        }, 5);
+        this.isScrambling = false;
 
         return this;
     }
@@ -175,10 +179,10 @@ class PuzzleBoard {
      * Checks if the puzzle is solvable
      * @returns {boolean}
      */
-    isSolvable(){
+    checkIfSolvable(){
 
-        const arr = this.rowsArr.map(r => {
-            return r.map(c => parseInt(c.innerHTML) || null);
+        const arr = this.rowsMatrix.map(r => {
+            return r.map(c => c || null);
         });
 
         let inversions = 0;
@@ -199,10 +203,27 @@ class PuzzleBoard {
     }
 
     /**
+     * Checks if the puzzle is solved
+     */
+    checkIfSolved(){
+        const { solvedCondition, rowsMatrix } = this;
+        const currentCondition = rowsMatrix.map(r => {
+            return r.map(c => c).join("");
+        }).join("");
+
+        return currentCondition === solvedCondition;
+    }
+
+    /**
      * Shifts the given cell to the empty space
      * @param cellObj
      */
     shiftCell(cellObj) {
+
+        if(cellObj.classList.contains("empty")){
+            return null;
+        }
+
         const
             idArr = cellObj.id.split("-"),
             cell = {
@@ -227,6 +248,13 @@ class PuzzleBoard {
                 this.shiftCellCount++;
                 this.puzzleInfo.updateInfo({shiftCellCount: this.shiftCellCount})
             }
+
+            this.isSolved = this.checkIfSolved();
+
+            if(this.isSolved){
+                alert("yay, you solved it!!");
+            }
+
         }
     }
 
@@ -321,10 +349,6 @@ class PuzzleBoard {
         // swaps A and B inside the rows cells object array
         this.rowsArr[a.row][a.col] = bCell;
         this.rowsArr[b.row][b.col] = aCell;
-        // swaps A and B inside the rows and cells matrix
-        this.rowsMatrix[a.row][a.col] = parseInt(bCell.innerText) || "empty";
-        this.rowsMatrix[b.row][b.col] = parseInt(aCell.innerText) || "empty";
-
     }
 
     _swapCellMatrix({a, b}){

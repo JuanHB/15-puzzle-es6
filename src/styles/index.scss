@@ -1,5 +1,14 @@
+form.puzzle-creation-form, div#root {
+  margin: 20px;
+}
+
 .puzzle-container {
-  width: 500px;
+
+  //width: 500px;
+
+  border: 1px solid #555;
+  padding: 10px;
+  margin-bottom: 10px;
 
   .puzzle-board-grid {
     display: grid;
@@ -7,20 +16,18 @@
     //grid-template-rows: auto auto auto auto auto;
     grid-column-gap: 5px;
     grid-row-gap: 5px;
-    background-color: cornflowerblue;
-    border: 1px solid cornflowerblue;
-    border-radius: 3px;
+    background-color: white;
     padding: 10px;
     font-family: Calibri;
 
     .grid-item {
-      background-color: lavender;
+      background-color: #DDDDDD;
       padding: 20px;
-      font-size: 30px;
+      font-size: 25px;
       text-align: center;
 
       &.empty {
-        background-color: cornflowerblue;
+        background-color: white;
       }
     }
   }
@@ -38,7 +45,6 @@
     }
 
   }
-
 }
 
 

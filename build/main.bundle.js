@@ -10104,8 +10104,11 @@ var PuzzleBoard = function () {
         this.rowsMatrix = [];
         this.totalCellCount = this.rows * this.columns;
 
-        this.isScrambling = false;
+        this.solvedCondition = null;
 
+        this.isSolved = false;
+
+        this.isScrambling = false;
         this.shiftCellCount = 0;
 
         this.puzzleInfo = null;
@@ -10118,7 +10121,7 @@ var PuzzleBoard = function () {
 
 
     _createClass(PuzzleBoard, [{
-        key: 'create',
+        key: "create",
         value: function create() {
             var _this = this;
 
@@ -10132,24 +10135,25 @@ var PuzzleBoard = function () {
                 shiftCellCount = this.shiftCellCount;
 
 
-            var puzzleContainerElem = document.createElement("div");
-            puzzleContainerElem.id = id;
-            puzzleContainerElem.classList.add("puzzle-container");
-
-            var puzzleBoardElem = document.createElement("div");
-            puzzleBoardElem.id = "board-" + id;
-            puzzleBoardElem.classList.add("puzzle-board-grid");
-
             var gridRows = rowsArr.map(function () {
                 return "auto";
             }).join(" ");
             var gridColumns = columnsArr.map(function () {
                 return "auto";
             }).join(" ");
-
-            puzzleBoardElem.setAttribute("style", ["grid-template-rows:", gridRows, ";", "grid-template-columns:", gridColumns, ";"].join(""));
+            var puzzleBoardElem = document.createElement("div");
+            var puzzleContainerElem = document.createElement("div");
 
             var cellNumber = 0;
+
+            // puzzle container element attributes
+            puzzleContainerElem.id = id;
+            puzzleContainerElem.classList.add("puzzle-container");
+
+            // puzzle board element attributes and style
+            puzzleBoardElem.id = "board-" + id;
+            puzzleBoardElem.classList.add("puzzle-board-grid");
+            puzzleBoardElem.setAttribute("style", ["grid-template-rows:", gridRows, ";", "grid-template-columns:", gridColumns, ";"].join(""));
 
             // creating cells and placing it on rows and columns
             rowsArr.forEach(function (row, rowIndex) {
@@ -10166,15 +10170,17 @@ var PuzzleBoard = function () {
                     if (cellNumber < totalCellCount - 1) {
                         cellNumber++;
                         newCellElem.innerHTML = cellNumber.toString();
-                        newCellElem.addEventListener("click", function () {
-                            return _this.shiftCell(newCellElem);
-                        });
                         newCellElem.classList.add("number");
                         rowCellsMatrix.push(cellNumber);
                     } else {
                         newCellElem.classList.add("empty");
                         rowCellsMatrix.push("empty");
                     }
+
+                    newCellElem.addEventListener("click", function () {
+                        return _this.shiftCell(newCellElem);
+                    });
+
                     rowCellsObj.push(newCellElem);
                     puzzleBoardElem.appendChild(newCellElem);
                 });
@@ -10200,6 +10206,13 @@ var PuzzleBoard = function () {
             var puzzleInfo = new _puzzleInfo2.default({ puzzleBoard: this });
             this.puzzleInfo = puzzleInfo.create().updateInfo({ shiftCellCount: shiftCellCount });
 
+            // creates and store the solved condition string
+            var arr = Array.from(new Array(totalCellCount), function (val, index) {
+                return index + 1;
+            });
+            arr[arr.length - 1] = "empty";
+            this.solvedCondition = arr.join("");
+
             return this;
         }
 
@@ -10209,53 +10222,49 @@ var PuzzleBoard = function () {
          */
 
     }, {
-        key: 'scramble',
+        key: "scramble",
         value: function scramble() {
-            var _this2 = this;
 
-            var i = 1,
-                previousCell = void 0;
+            this.isSolved = false;
             this.isScrambling = true;
             this.shiftCellCount = 0;
             this.puzzleInfo.updateInfo({ shiftCellCount: this.shiftCellCount });
 
-            var rowsMatrix = this.rowsMatrix;
+            var rowsMatrix = this.rowsMatrix,
+                rowsArr = this.rowsArr;
 
+            // do the scramble 100 times...
 
-            var interval = setInterval(function () {
-                if (i <= _this2.totalCellCount) {
+            for (var i = 0; i < 100; i++) {
 
-                    var adjacent = _this2.getAdjacentCells(_this2.getCellPosition("empty"));
+                var emptyCell = this.getCellPosition("empty");
+                var adjacent = this.getAdjacentCells(emptyCell);
+                var randomCell = adjacent[this.constructor._rand({ from: 0, to: adjacent.length - 1 })];
+                var cellsToSwap = { a: emptyCell, b: randomCell };
+                this._swapCellMatrix(cellsToSwap);
+            }
 
-                    /*if(previousCell){
-                        for(let j = adjacent.length-1; j >= 0; j--){
-                            if(adjacent[j].innerHTML === previousCell.innerHTML){
-                                adjacent.splice(j, 1);
-                            }
-                        }
-                    }*/
+            // if is not solvable, runs the scramble again (recursions bad, I know)
+            if (!this.checkIfSolvable()) {
+                return this.scramble();
+            }
 
-                    // Gets random adjacent cell and memorizes it for the next iteration
-                    previousCell = adjacent[_this2.constructor._rand({ from: 0, to: adjacent.length - 1 })];
+            // updating the HTML with the new values for each position
+            rowsMatrix.forEach(function (row, rowIndex) {
+                row.forEach(function (cell, cellIndex) {
+                    var destCellObj = rowsArr[rowIndex][cellIndex];
+                    destCellObj.innerText = cell === "empty" ? "" : cell;
+                    destCellObj.classList.toggle("number", cell !== "empty");
+                    destCellObj.classList.toggle("empty", cell === "empty");
+                });
+            });
 
-                    _this2.shiftCellObj(previousCell);
-
-                    i++;
-                } else {
-                    clearInterval(interval);
-                    // recursion is bad!! >:(
-                    if (!_this2.isSolvable()) {
-                        _this2.scramble();
-                    } else {
-                        _this2.isScrambling = false;
-                    }
-                }
-            }, 5);
+            this.isScrambling = false;
 
             return this;
         }
     }, {
-        key: 'solve',
+        key: "solve",
         value: function solve() {
             console.log("solve");
         }
@@ -10266,12 +10275,12 @@ var PuzzleBoard = function () {
          */
 
     }, {
-        key: 'isSolvable',
-        value: function isSolvable() {
+        key: "checkIfSolvable",
+        value: function checkIfSolvable() {
 
-            var arr = this.rowsArr.map(function (r) {
+            var arr = this.rowsMatrix.map(function (r) {
                 return r.map(function (c) {
-                    return parseInt(c.innerHTML) || null;
+                    return c || null;
                 });
             });
 
@@ -10292,13 +10301,37 @@ var PuzzleBoard = function () {
         }
 
         /**
+         * Checks if the puzzle is solved
+         */
+
+    }, {
+        key: "checkIfSolved",
+        value: function checkIfSolved() {
+            var solvedCondition = this.solvedCondition,
+                rowsMatrix = this.rowsMatrix;
+
+            var currentCondition = rowsMatrix.map(function (r) {
+                return r.map(function (c) {
+                    return c;
+                }).join("");
+            }).join("");
+
+            return currentCondition === solvedCondition;
+        }
+
+        /**
          * Shifts the given cell to the empty space
          * @param cellObj
          */
 
     }, {
-        key: 'shiftCell',
+        key: "shiftCell",
         value: function shiftCell(cellObj) {
+
+            if (cellObj.classList.contains("empty")) {
+                return null;
+            }
+
             var idArr = cellObj.id.split("-"),
                 cell = {
                 row: parseInt(idArr[1]),
@@ -10324,12 +10357,18 @@ var PuzzleBoard = function () {
                     this.shiftCellCount++;
                     this.puzzleInfo.updateInfo({ shiftCellCount: this.shiftCellCount });
                 }
+
+                this.isSolved = this.checkIfSolved();
+
+                if (this.isSolved) {
+                    alert("yay, you solved it!!");
+                }
             }
         }
     }, {
-        key: 'getAdjacentCells',
+        key: "getAdjacentCells",
         value: function getAdjacentCells(_ref2) {
-            var _this3 = this;
+            var _this2 = this;
 
             var row = _ref2.row,
                 col = _ref2.col;
@@ -10349,11 +10388,11 @@ var PuzzleBoard = function () {
             return adjacent.filter(function (a) {
                 return !!a;
             }).map(function (c) {
-                return _this3.getCellPosition(c);
+                return _this2.getCellPosition(c);
             });
         }
     }, {
-        key: 'getCellObj',
+        key: "getCellObj",
         value: function getCellObj(_ref3) {
             var row = _ref3.row,
                 col = _ref3.col;
@@ -10361,7 +10400,7 @@ var PuzzleBoard = function () {
             return this.rowsArr[row][col];
         }
     }, {
-        key: 'getCellPosition',
+        key: "getCellPosition",
         value: function getCellPosition(cellNumber) {
             var rowsMatrix = this.rowsMatrix;
 
@@ -10388,7 +10427,7 @@ var PuzzleBoard = function () {
          */
 
     }, {
-        key: '_swapCellObj',
+        key: "_swapCellObj",
 
 
         /**
@@ -10408,12 +10447,9 @@ var PuzzleBoard = function () {
             // swaps A and B inside the rows cells object array
             this.rowsArr[a.row][a.col] = bCell;
             this.rowsArr[b.row][b.col] = aCell;
-            // swaps A and B inside the rows and cells matrix
-            this.rowsMatrix[a.row][a.col] = parseInt(bCell.innerText) || "empty";
-            this.rowsMatrix[b.row][b.col] = parseInt(aCell.innerText) || "empty";
         }
     }, {
-        key: '_swapCellMatrix',
+        key: "_swapCellMatrix",
         value: function _swapCellMatrix(_ref5) {
             var a = _ref5.a,
                 b = _ref5.b;
@@ -10427,7 +10463,7 @@ var PuzzleBoard = function () {
             this.rowsMatrix[b.row][b.col] = cellA;
         }
     }], [{
-        key: '_generateHex',
+        key: "_generateHex",
         value: function _generateHex() {
             return (Math.random() * 0xFFFFFF << 0).toString(16);
         }
@@ -10441,7 +10477,7 @@ var PuzzleBoard = function () {
          */
 
     }, {
-        key: '_rand',
+        key: "_rand",
         value: function _rand(_ref6) {
             var from = _ref6.from,
                 to = _ref6.to;
@@ -10457,7 +10493,7 @@ var PuzzleBoard = function () {
          */
 
     }, {
-        key: '_swapNodes',
+        key: "_swapNodes",
         value: function _swapNodes(_ref7) {
             var a = _ref7.a,
                 b = _ref7.b;
@@ -10491,7 +10527,7 @@ exports.default = PuzzleBoard;
 
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+        value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -10499,54 +10535,44 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var PuzzleControls = function () {
-    function PuzzleControls(_ref) {
-        var puzzleBoard = _ref.puzzleBoard;
+        function PuzzleControls(_ref) {
+                var puzzleBoard = _ref.puzzleBoard;
 
-        _classCallCheck(this, PuzzleControls);
+                _classCallCheck(this, PuzzleControls);
 
-        this.puzzleBoard = puzzleBoard;
-    }
-
-    _createClass(PuzzleControls, [{
-        key: "create",
-        value: function create() {
-            var _this = this;
-
-            var _puzzleBoard = this.puzzleBoard,
-                id = _puzzleBoard.id,
-                puzzleContainerElem = _puzzleBoard.puzzleContainerElem;
-
-
-            var puzzleControlsElem = document.createElement("div");
-            puzzleControlsElem.id = "controls-" + id;
-            puzzleControlsElem.classList.add("puzzle-controls");
-
-            var scrambleButtonElem = document.createElement("button");
-            scrambleButtonElem.id = "scramble-" + id;
-            scrambleButtonElem.innerHTML = "Scramble";
-            scrambleButtonElem.classList.add("action");
-            scrambleButtonElem.classList.add("scramble");
-            scrambleButtonElem.addEventListener("click", function () {
-                return _this.puzzleBoard.scramble();
-            });
-
-            var solveButtonElem = document.createElement("button");
-            solveButtonElem.id = "solve-" + id;
-            solveButtonElem.innerHTML = "Solve";
-            solveButtonElem.classList.add("action");
-            solveButtonElem.classList.add("solve");
-            solveButtonElem.addEventListener("click", function () {
-                return _this.puzzleBoard.solve();
-            });
-
-            puzzleControlsElem.appendChild(solveButtonElem);
-            puzzleControlsElem.appendChild(scrambleButtonElem);
-
-            puzzleContainerElem.appendChild(puzzleControlsElem);
+                this.puzzleBoard = puzzleBoard;
         }
-    }]);
 
-    return PuzzleControls;
+        _createClass(PuzzleControls, [{
+                key: "create",
+                value: function create() {
+                        var _this = this;
+
+                        var _puzzleBoard = this.puzzleBoard,
+                            id = _puzzleBoard.id,
+                            puzzleContainerElem = _puzzleBoard.puzzleContainerElem;
+
+
+                        var puzzleControlsElem = document.createElement("div");
+                        puzzleControlsElem.id = "controls-" + id;
+                        puzzleControlsElem.classList.add("puzzle-controls");
+
+                        var scrambleButtonElem = document.createElement("button");
+                        scrambleButtonElem.id = "scramble-" + id;
+                        scrambleButtonElem.innerHTML = "Scramble";
+                        scrambleButtonElem.classList.add("action");
+                        scrambleButtonElem.classList.add("scramble");
+                        scrambleButtonElem.addEventListener("click", function () {
+                                return _this.puzzleBoard.scramble();
+                        });
+
+                        puzzleControlsElem.appendChild(scrambleButtonElem);
+
+                        puzzleContainerElem.appendChild(puzzleControlsElem);
+                }
+        }]);
+
+        return PuzzleControls;
 }();
 
 exports.default = PuzzleControls;
@@ -10648,8 +10674,29 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var Interactions = function Interactions() {
 
+    var bindCreatePuzzleActions = function bindCreatePuzzleActions() {
+
+        var formCreatePuzzle = document.getElementById("create-new-puzzle");
+
+        formCreatePuzzle.addEventListener("submit", function (ev) {
+            ev.preventDefault();
+
+            var columns = parseInt(formCreatePuzzle[0].value);
+            var rows = parseInt(formCreatePuzzle[1].value);
+
+            if (!isNaN(columns) && !isNaN(rows)) {
+                var newPuzzleBoard = new _puzzleBoard2.default({
+                    columns: columns, rows: rows
+                });
+                newPuzzleBoard.create().scramble();
+            }
+        });
+    };
+
+    bindCreatePuzzleActions();
+
     var puzzleBoard = new _puzzleBoard2.default({
-        rows: 4, columns: 4
+        rows: 2, columns: 2
     });
 
     puzzleBoard.create().scramble();

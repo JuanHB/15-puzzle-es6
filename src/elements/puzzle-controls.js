@@ -19,14 +19,6 @@ class PuzzleControls {
         scrambleButtonElem.classList.add("scramble");
         scrambleButtonElem.addEventListener("click", () => this.puzzleBoard.scramble());
 
-        const solveButtonElem = document.createElement("button");
-        solveButtonElem.id = "solve-"+id;
-        solveButtonElem.innerHTML = "Solve";
-        solveButtonElem.classList.add("action");
-        solveButtonElem.classList.add("solve");
-        solveButtonElem.addEventListener("click", () => this.puzzleBoard.solve());
-
-        puzzleControlsElem.appendChild(solveButtonElem);
         puzzleControlsElem.appendChild(scrambleButtonElem);
 
         puzzleContainerElem
