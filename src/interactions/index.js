@@ -2,7 +2,9 @@ import PuzzleBoard from "../elements/puzzle-board";
 
 const Interactions = () => {
 
-
+    /**
+     * Binds the interactions from the creation form
+     */
     const bindCreatePuzzleActions = () => {
 
         const formCreatePuzzle = document.getElementById("create-new-puzzle");
@@ -12,27 +14,21 @@ const Interactions = () => {
 
             const columns = parseInt(formCreatePuzzle[0].value);
             const rows = parseInt(formCreatePuzzle[1].value);
+            const tileSize = parseInt(formCreatePuzzle[2].value);
 
-            if(!isNaN(columns) && !isNaN(rows)){
+            if(!isNaN(columns) && !isNaN(rows) && (rows > 1 && columns > 1)){
                 const newPuzzleBoard = new PuzzleBoard({
-                    columns, rows
+                    columns, rows, tileSize
                 });
                 newPuzzleBoard.create().scramble();
             }
-        })
+        });
 
+        const puzzleBoard = new PuzzleBoard({rows: 4, columns: 4});
+        puzzleBoard.create().scramble();
     };
 
     bindCreatePuzzleActions();
-
-
-    const puzzleBoard = new PuzzleBoard({
-        rows: 2, columns: 2
-    });
-
-    puzzleBoard
-        .create()
-        .scramble();
 
 };
 export default Interactions;

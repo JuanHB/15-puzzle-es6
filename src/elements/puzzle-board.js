@@ -11,7 +11,7 @@ class PuzzleBoard {
      * @param columns {Number} The total number of columns
      * @param tileSize {Number} The tile size in pixels, default 80px
      */
-    constructor({rows, columns , tileSize = 80}){
+    constructor({rows, columns , tileSize = 100}){
 
         this.rows = rows;
         this.columns = columns;
@@ -45,11 +45,21 @@ class PuzzleBoard {
      */
     create() {
 
-        const { id, tileSize, rowsMatrix, rowsArr, columnsArr, totalCellCount, rootElem, shiftCellCount } = this;
+        const {
+            id,
+            columns,
+            rowsArr,
+            rootElem,
+            tileSize,
+            rowsMatrix,
+            columnsArr,
+            totalCellCount,
+            shiftCellCount
+        } = this;
 
         const gridRows = rowsArr.map(() => "auto").join(" ");
         const gridColumns = columnsArr.map(() => "auto").join(" ");
-        const puzzleBoardElem = document.createElement("div");
+        const puzzleBoardElem = document.createElement("ul");
         const puzzleContainerElem = document.createElement("div");
 
         let cellNumber = 0;
@@ -62,8 +72,7 @@ class PuzzleBoard {
         puzzleBoardElem.id = "board-"+id;
         puzzleBoardElem.classList.add("puzzle-board-grid");
         puzzleBoardElem.setAttribute("style", [
-            "grid-template-rows:", gridRows,";",
-            "grid-template-columns:", gridColumns,";",
+            "max-width:",(columns*tileSize)+90, "px;",
         ].join(""));
 
         // creating cells and placing it on rows and columns
@@ -71,9 +80,14 @@ class PuzzleBoard {
             const rowCellsObj = [], rowCellsMatrix = [];
             columnsArr.forEach(col => {
 
-                const newCellElem = document.createElement("div");
+                const newCellElem = document.createElement("li");
                 newCellElem.id = ["cell-", row, "-", col].join("");
                 newCellElem.classList.add("grid-item");
+                newCellElem.setAttribute("style", [
+                    "width:", tileSize, "px;",
+                    "height:",tileSize,"px;",
+                    "line-height:", tileSize,"px;"
+                ].join(""));
 
                 // adds the cell attributes by checking if the
                 // current cell element is not the last one
@@ -140,8 +154,8 @@ class PuzzleBoard {
 
         const { rowsMatrix, rowsArr } = this;
 
-        // do the scramble 100 times...
-        for(let i = 0; i < 100; i++){
+        // do the scramble 200 times...
+        for(let i = 0; i < 200; i++){
 
             const emptyCell = this.getCellPosition("empty");
             const adjacent = this.getAdjacentCells(emptyCell);
@@ -171,8 +185,8 @@ class PuzzleBoard {
         return this;
     }
 
-    solve() {
-        console.log("solve");
+    remove() {
+        this.puzzleContainerElem.remove();
     }
 
     /**
