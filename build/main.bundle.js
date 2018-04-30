@@ -167,14 +167,8 @@ var PuzzleBoard = function () {
                 shiftCellCount = this.shiftCellCount;
 
 
-            var gridRows = rowsArr.map(function () {
-                return "auto";
-            }).join(" ");
-            var gridColumns = columnsArr.map(function () {
-                return "auto";
-            }).join(" ");
-            var puzzleBoardElem = document.createElement("ul");
             var puzzleContainerElem = document.createElement("div");
+            var puzzleBoardElem = document.createElement("ul");
 
             var cellNumber = 0;
 
@@ -185,7 +179,7 @@ var PuzzleBoard = function () {
             // puzzle board element attributes and style
             puzzleBoardElem.id = "board-" + id;
             puzzleBoardElem.classList.add("puzzle-board-grid");
-            puzzleBoardElem.setAttribute("style", ["max-width:", columns * tileSize + 90, "px;"].join(""));
+            puzzleBoardElem.setAttribute("style", ["max-width:", columns * tileSize + tileSize, "px;"].join(""));
 
             // creating cells and placing it on rows and columns
             rowsArr.forEach(function (row, rowIndex) {
@@ -226,7 +220,7 @@ var PuzzleBoard = function () {
 
             // appends the new crated puzzle to the
             // #root element on the index file
-            rootElem.appendChild(puzzleContainerElem);
+            rootElem.prepend(puzzleContainerElem);
 
             this.puzzleBoardElem = puzzleBoardElem;
             this.puzzleContainerElem = puzzleContainerElem;

@@ -57,10 +57,8 @@ class PuzzleBoard {
             shiftCellCount
         } = this;
 
-        const gridRows = rowsArr.map(() => "auto").join(" ");
-        const gridColumns = columnsArr.map(() => "auto").join(" ");
-        const puzzleBoardElem = document.createElement("ul");
         const puzzleContainerElem = document.createElement("div");
+        const puzzleBoardElem = document.createElement("ul");
 
         let cellNumber = 0;
 
@@ -72,7 +70,7 @@ class PuzzleBoard {
         puzzleBoardElem.id = "board-"+id;
         puzzleBoardElem.classList.add("puzzle-board-grid");
         puzzleBoardElem.setAttribute("style", [
-            "max-width:",(columns*tileSize)+90, "px;",
+            "max-width:",(columns*tileSize)+tileSize, "px;",
         ].join(""));
 
         // creating cells and placing it on rows and columns
@@ -118,7 +116,7 @@ class PuzzleBoard {
         // appends the new crated puzzle to the
         // #root element on the index file
         rootElem
-            .appendChild(puzzleContainerElem);
+            .prepend(puzzleContainerElem);
 
         this.puzzleBoardElem = puzzleBoardElem;
         this.puzzleContainerElem = puzzleContainerElem;
