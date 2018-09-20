@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>15 Puzzle - ES6 / webpack</title>
+    <link rel="stylesheet" type="text/css" href="styles.min.css">
+    <script src="main.bundle.js"></script>
+
+</head>
+<body>
+
+<div>
+    <form id="create-new-puzzle" class="puzzle-creation-form">
+        <label for="columns">Columns:</label>
+        <input id="columns" type="text" value="4"/>
+        <label for="rows">Rows:</label>
+        <input id="rows" type="text" value="4" />
+        <label for="tile-size">Tile Size:</label>
+        <input id="tile-size" type="text" value="100" /> px
+        <button type="submit">Create new Puzzle Board</button>
+    </form>
+</div>
+
+<div id="root"></div>
+
+</body>
+</html>
